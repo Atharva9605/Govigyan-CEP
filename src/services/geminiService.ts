@@ -1,3 +1,4 @@
+
 import axios, { AxiosRequestConfig } from "axios";
 import { toast } from "sonner";
 import config from "../config/api";
@@ -73,21 +74,13 @@ export const uploadFile = async <T>(endpoint: string, file: File, additionalData
     console.log("Uploading file:", file.name, "to endpoint:", endpoint);
     
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("files", file);
     
     // Add any additional data if provided
     if (additionalData) {
       Object.keys(additionalData).forEach(key => {
         formData.append(key, additionalData[key]);
       });
-    }
-    
-    // Test if API is reachable first
-    try {
-      await apiClient.get('/health');
-    } catch (healthError) {
-      console.error("API health check failed:", healthError);
-      throw new Error("API server is not reachable. Please check the server status.");
     }
     
     const response = await apiClient.post<T>(endpoint, formData, {
@@ -129,7 +122,7 @@ export const geminiApi = {
   processFiles: async (files: File[]) => {
     try {
       const formData = new FormData();
-      files.forEach(file => formData.append('file', file));
+      files.forEach(file => formData.append('files', file));
       
       const response = await apiClient.post<any>(config.ENDPOINTS.EXTRACT_DATA, formData, {
         headers: {
