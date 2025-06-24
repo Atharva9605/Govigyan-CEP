@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { geminiApi } from "../services/geminiService";
 import { toast } from "sonner";
@@ -33,10 +34,10 @@ export function useGeminiApi() {
         errorMessage = err.message;
         
         // Provide more specific error messages
-        if (errorMessage.includes('timeout')) {
+        if (errorMessage.includes('CORS') || errorMessage.includes('Network Error')) {
+          errorMessage = `CORS Configuration Issue: Your Flask API at ${config.GEMINI_API_URL} needs to allow requests from this domain. Please update your CORS settings to include: ${window.location.origin}`;
+        } else if (errorMessage.includes('timeout')) {
           errorMessage = "The request took too long to process. Please try with a smaller file or try again later.";
-        } else if (errorMessage.includes('Network')) {
-          errorMessage = `Cannot connect to the API server at ${config.GEMINI_API_URL}. Please check if the server is running.`;
         } else if (errorMessage.includes('404')) {
           errorMessage = "API endpoint not found. Please check the API configuration.";
         } else if (errorMessage.includes('500')) {
