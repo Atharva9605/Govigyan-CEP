@@ -2,7 +2,7 @@
 // API configuration values
 const config = {
   // Base API URL from environment variable
-  GEMINI_API_URL: import.meta.env.VITE_API_BASE_URL || "https://govigyan-gemini.onrender.com",
+  GEMINI_API_URL: import.meta.env.VITE_API_BASE_URL || "https://gemini-govigyan.onrender.com",
   
   // Increased timeout for API requests in milliseconds (2 minutes)
   API_TIMEOUT: 120000,
@@ -15,13 +15,13 @@ const config = {
   
   // Endpoints
   ENDPOINTS: {
-    ANALYZE_IMAGE: "/upload-flash",
-    GET_ANALYSIS: "/results",
-    EXTRACT_DATA: "/upload-flash",
+    ANALYZE_IMAGE: "/process",
+    GET_ANALYSIS: "/get-analysis",
+    EXTRACT_DATA: "/process",
     CREATE_DATABASE: "/create-database",
     INSERT_DATA: "/insert-data",
-    CSV_DATA: "/results",
-    UPDATE_CSV_DATA: "/update"
+    CSV_DATA: "/csv-data",
+    UPDATE_CSV_DATA: "/update-csv-data"
   }
 };
 

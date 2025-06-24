@@ -16,31 +16,8 @@ const apiClient = axios.create({
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error("API Error Details:", error);
-    
-    if (error.code === 'ERR_NETWORK') {
-      const message = "CORS Error: The API server is not configured to accept requests from this domain. Please update the CORS settings on your Flask API to include this frontend URL.";
-      toast.error(message);
-    } else if (error.response?.status === 0) {
-      const message = "Connection blocked by CORS policy. Please check your API's CORS configuration.";
-      toast.error(message);
-    } else {
-      const message = error.response?.data?.message || error.message || "An error occurred";
-      toast.error(`API Error: ${message}`);
-    }
-    return Promise.reject(error);
-  }
-);
-
-// Add request interceptor for logging
-apiClient.interceptors.request.use(
-  (config) => {
-    console.log("Making API request to:", config.baseURL + config.url);
-    console.log("Request headers:", config.headers);
-    return config;
-  },
-  (error) => {
-    console.error("Request error:", error);
+    const message = error.response?.data?.message || "An error occurred";
+    toast.error(`API Error: ${message}`);
     return Promise.reject(error);
   }
 );
@@ -75,11 +52,8 @@ export const postData = async <T>(endpoint: string, data: any): Promise<T> => {
 // File upload method specifically for handling file uploads
 export const uploadFile = async <T>(endpoint: string, file: File, additionalData?: any): Promise<T> => {
   try {
-    console.log("Uploading file:", file.name, "to endpoint:", endpoint);
-    console.log("Full URL:", config.GEMINI_API_URL + endpoint);
-    
     const formData = new FormData();
-    formData.append("files", file);
+    formData.append("file", file);
     
     // Add any additional data if provided
     if (additionalData) {
@@ -88,27 +62,15 @@ export const uploadFile = async <T>(endpoint: string, file: File, additionalData
       });
     }
     
-    console.log("FormData contents:");
-    for (let [key, value] of formData.entries()) {
-      console.log(key, value);
-    }
-    
     const response = await apiClient.post<T>(endpoint, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
-      timeout: config.API_TIMEOUT,
     });
     
-    console.log("Upload response:", response.data);
     return response.data;
   } catch (error) {
     console.error(`Error uploading file to ${endpoint}:`, error);
-    
-    if (error.code === 'ERR_NETWORK') {
-      throw new Error("CORS Error: Your Flask API needs to be configured to accept requests from this frontend domain. Please update your CORS settings.");
-    }
-    
     throw error;
   }
 };
@@ -131,7 +93,7 @@ export const geminiApi = {
   processFiles: async (files: File[]) => {
     try {
       const formData = new FormData();
-      files.forEach(file => formData.append('files', file));
+      files.forEach(file => formData.append('file', file));
       
       const response = await apiClient.post<any>(config.ENDPOINTS.EXTRACT_DATA, formData, {
         headers: {

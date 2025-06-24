@@ -1,4 +1,3 @@
-
 import { useState, useRef, ChangeEvent, DragEvent, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -210,15 +209,45 @@ const Upload = () => {
     setUploadError(null);
 
     try {
-      console.log("Starting upload process...");
+      toast.info("Uploading files to storage...");
       
-      // Skip Supabase storage upload and directly process with Gemini
-      toast.info("Processing files with Gemini AI...");
+      const uploadedFiles = [];
+      
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${uuidv4()}.${fileExt}`;
+        const filePath = `uploads/${fileName}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('user_files')
+          .upload(filePath, file);
+        
+        if (uploadError) throw uploadError;
+        
+        const { error: dbError, data: fileData } = await supabase
+          .from('user_uploads')
+          .insert({
+            file_name: file.name,
+            file_type: file.type,
+            file_size: file.size,
+            storage_path: filePath
+          })
+          .select('id')
+          .single();
+        
+        if (dbError) throw dbError;
+        
+        uploadedFiles.push({
+          id: fileData.id,
+          file: file,
+          path: filePath
+        });
+      }
+      
+      toast.info("Files uploaded, analyzing with Gemini AI...");
       
       const pdfFile = files.find(file => file.type === 'application/pdf');
       const fileToProcess = pdfFile || files[0];
-      
-      console.log("Processing file:", fileToProcess.name);
       
       const results = await analyzeImage(fileToProcess);
       console.log("Analysis results:", results);
@@ -244,12 +273,13 @@ const Upload = () => {
         BALANCE_Amount: Number(item.BALANCE_Amount || 0)
       }));
       
-      console.log("Formatted data:", formattedData);
+      if (formattedData.length > 0) {
+        toast.success("Data processed successfully");
+      }
       
       setUploadSuccess(true);
-      toast.success("Files successfully processed and analyzed");
+      toast.success("Files successfully uploaded and analyzed");
       
-      // Navigate to spreadsheet view
       navigate('/spreadsheet-view', { 
         state: { 
           fileName: fileToProcess.name
@@ -258,9 +288,8 @@ const Upload = () => {
       
     } catch (err) {
       console.error("Upload error:", err);
-      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
-      setUploadError(errorMessage);
-      toast.error("Failed to process files: " + errorMessage);
+      setUploadError(err instanceof Error ? err.message : "An unknown error occurred");
+      toast.error("Failed to upload files");
     } finally {
       setIsUploading(false);
     }
@@ -451,7 +480,7 @@ const Upload = () => {
                     ) : (
                       <span className="flex items-center gap-1">
                         <ArrowRight className="h-4 w-4" />
-                        Process & Analyze
+                        Upload & Analyze
                       </span>
                     )}
                   </Button>
@@ -503,10 +532,11 @@ const Upload = () => {
               <div>
                 <h3 className="mb-2 text-lg font-medium">Process</h3>
                 <ol className="ml-6 list-decimal space-y-2 text-muted-foreground">
-                  <li>Select your files for processing</li>
-                  <li>Gemini AI analyzes the content directly</li>
-                  <li>Results are displayed in Google Sheets</li>
-                  <li>View and edit data in the embedded spreadsheet</li>
+                  <li>Upload your files securely to our storage</li>
+                  <li>Gemini AI analyzes the content</li>
+                  <li>Results are displayed as spreadsheet data</li>
+                  <li>Data is synced with Google Sheets</li>
+                  <li>Edit and save changes back to database</li>
                 </ol>
               </div>
               
@@ -515,8 +545,8 @@ const Upload = () => {
               <div>
                 <h3 className="mb-2 text-lg font-medium">Privacy & Security</h3>
                 <p className="text-muted-foreground">
-                  Files are processed securely through Gemini AI. 
-                  Your data is handled with complete privacy.
+                  Files are securely stored and only accessible to you. 
+                  Processing happens on our secure servers.
                 </p>
               </div>
             </CardContent>
