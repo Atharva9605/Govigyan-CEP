@@ -1,7 +1,7 @@
-
 import { useState } from "react";
 import { geminiApi } from "../services/geminiService";
 import { toast } from "sonner";
+import config from "../config/api";
 
 export function useGeminiApi() {
   const [isLoading, setIsLoading] = useState(false);
@@ -13,24 +13,41 @@ export function useGeminiApi() {
     setError(null);
     
     try {
+      console.log("Starting file analysis with Gemini API...");
+      console.log("API URL:", config.GEMINI_API_URL);
+      console.log("File details:", { name: file.name, size: file.size, type: file.type });
+      
       toast.info("Processing with Gemini AI, this may take up to 2 minutes for large files...");
+      
       const result = await geminiApi.analyzeImage(file, options);
+      
+      console.log("Analysis completed successfully:", result);
       setIsLoading(false);
       return result;
     } catch (err) {
+      console.error("Analysis failed:", err);
+      
       let errorMessage = "Unknown error occurred";
       
       if (err instanceof Error) {
         errorMessage = err.message;
-        // Provide more friendly message for timeout errors
+        
+        // Provide more specific error messages
         if (errorMessage.includes('timeout')) {
           errorMessage = "The request took too long to process. Please try with a smaller file or try again later.";
+        } else if (errorMessage.includes('Network')) {
+          errorMessage = `Cannot connect to the API server at ${config.GEMINI_API_URL}. Please check if the server is running.`;
+        } else if (errorMessage.includes('404')) {
+          errorMessage = "API endpoint not found. Please check the API configuration.";
+        } else if (errorMessage.includes('500')) {
+          errorMessage = "Server error occurred. Please try again later.";
         }
       }
       
-      setError(err instanceof Error ? err : new Error(errorMessage));
+      const error = err instanceof Error ? err : new Error(errorMessage);
+      setError(error);
       setIsLoading(false);
-      throw err;
+      throw error;
     }
   };
 

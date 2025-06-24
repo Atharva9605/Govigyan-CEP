@@ -1,4 +1,3 @@
-
 import axios, { AxiosRequestConfig } from "axios";
 import { toast } from "sonner";
 import config from "../config/api";
@@ -16,8 +15,27 @@ const apiClient = axios.create({
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    const message = error.response?.data?.message || "An error occurred";
-    toast.error(`API Error: ${message}`);
+    console.error("API Error Details:", error);
+    
+    if (error.code === 'ERR_NETWORK') {
+      const message = "Network connection failed. Please check if the API server is running and accessible.";
+      toast.error(message);
+    } else {
+      const message = error.response?.data?.message || error.message || "An error occurred";
+      toast.error(`API Error: ${message}`);
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Add request interceptor for logging
+apiClient.interceptors.request.use(
+  (config) => {
+    console.log("Making API request to:", config.baseURL + config.url);
+    return config;
+  },
+  (error) => {
+    console.error("Request error:", error);
     return Promise.reject(error);
   }
 );
@@ -52,6 +70,8 @@ export const postData = async <T>(endpoint: string, data: any): Promise<T> => {
 // File upload method specifically for handling file uploads
 export const uploadFile = async <T>(endpoint: string, file: File, additionalData?: any): Promise<T> => {
   try {
+    console.log("Uploading file:", file.name, "to endpoint:", endpoint);
+    
     const formData = new FormData();
     formData.append("file", file);
     
@@ -62,15 +82,31 @@ export const uploadFile = async <T>(endpoint: string, file: File, additionalData
       });
     }
     
+    // Test if API is reachable first
+    try {
+      await apiClient.get('/health');
+    } catch (healthError) {
+      console.error("API health check failed:", healthError);
+      throw new Error("API server is not reachable. Please check the server status.");
+    }
+    
     const response = await apiClient.post<T>(endpoint, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
+      // Add timeout specific for file uploads
+      timeout: config.API_TIMEOUT,
     });
     
+    console.log("Upload response:", response.data);
     return response.data;
   } catch (error) {
     console.error(`Error uploading file to ${endpoint}:`, error);
+    
+    if (error.code === 'ERR_NETWORK') {
+      throw new Error("Network connection failed. Please check if the API server is running at " + config.GEMINI_API_URL);
+    }
+    
     throw error;
   }
 };
